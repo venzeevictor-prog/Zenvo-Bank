@@ -56,3 +56,16 @@ jobs:
         run: find src public tests scripts -name '*.js' -print0 | xargs -0 -n1 node --check
       - name: Run backend test suite
         run: npm test
+      - name: Smoke test served web application
+        shell: bash
+        run: |
+          npm start > /tmp/zenvobank-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 20); do
+            if curl --fail --silent http://127.0.0.1:3000/ -o /tmp/zenvobank-home.html; then break; fi
+            sleep 1
+          done
+          grep -q 'ZenvoBank' /tmp/zenvobank-home.html
+          curl --fail --silent http://127.0.0.1:3000/styles.css | grep -q ':root'
+          curl --fail --silent http://127.0.0.1:3000/app.js | grep -q 'function overview'
