@@ -1,0 +1,80 @@
+name: Extract ZenvoBank source archive
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/unpack-zenvobank.yml'
+      - 'zenvobank.zip'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  extract-and-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Extract source archive safely
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path, PurePosixPath
+          from zipfile import ZipFile
+          import shutil
+
+          archive = Path("zenvobank.zip")
+          if not archive.is_file():
+              raise SystemExit("zenvobank.zip was not found at the repository root.")
+
+          destination = Path("/tmp/zenvobank-extracted")
+          destination.mkdir(parents=True, exist_ok=True)
+
+          with ZipFile(archive) as zf:
+              names = zf.namelist()
+              if not names:
+                  raise SystemExit("The ZIP archive is empty.")
+              for name in names:
+                  path = PurePosixPath(name)
+                  if path.is_absolute() or ".." in path.parts:
+                      raise SystemExit(f"Unsafe archive path rejected: {name}")
+              zf.extractall(destination)
+
+          entries = list(destination.iterdir())
+          if len(entries) == 1 and entries[0].is_dir():
+              source = entries[0]
+          else:
+              source = destination
+
+          excluded = {".git", "zenvobank.zip"}
+          for item in source.iterdir():
+              if item.name in excluded:
+                  continue
+              target = Path.cwd() / item.name
+              if item.is_dir():
+                  shutil.copytree(item, target, dirs_exist_ok=True,
+                                  ignore=shutil.ignore_patterns(".git"))
+              else:
+                  shutil.copy2(item, target)
+
+          count = sum(1 for p in Path.cwd().rglob("*")
+                      if p.is_file() and ".git" not in p.parts)
+          print(f"Archive extracted. Repository now contains {count} files.")
+          PY
+      - name: Commit extracted source
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git reset -- zenvobank.zip
+          if git diff --cached --quiet; then
+            echo "No extracted source changes to commit."
+            exit 0
+          fi
+          git commit -m "Extract ZenvoBank source archive"
+          git push
