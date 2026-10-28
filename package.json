@@ -1,0 +1,27 @@
+{
+  "name": "zenvobank",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "ZenvoBank - multi-currency digital banking platform (foundation, ledger, accounting)",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "NODE_ENV=development node --watch src/server.js",
+    "migrate": "node src/database/migrate.js",
+    "create-admin": "node scripts/create-admin.js",
+    "pretest": "node scripts/reset-test-db.js",
+    "test": "NODE_ENV=test node --test --test-concurrency=1 \"tests/**/*.test.js\""
+  },
+  "dependencies": {
+    "argon2": "^0.44.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^17.2.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.0.0",
+    "helmet": "^8.1.0",
+    "pg": "^8.16.0",
+    "pino": "^9.9.0",
+    "zod": "^4.0.0"
+  }
+}
