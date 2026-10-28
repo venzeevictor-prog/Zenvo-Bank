@@ -1,4 +1,5 @@
 import express from 'express';
+import { fileURLToPath } from 'node:url';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
@@ -37,6 +38,8 @@ export function createApp() {
   app.use('/api/v1/transfers', transfersRouter);
   app.use('/api/v1/admin', adminRouter);
   app.use('/api/v1', customerRouter);
+
+  app.use(express.static(fileURLToPath(new URL('../public/', import.meta.url)), { index: 'index.html', maxAge: config.isProd ? '1h' : 0 }));
 
   app.use(notFoundHandler);
   app.use(errorHandler);
